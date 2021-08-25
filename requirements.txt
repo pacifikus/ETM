@@ -17,3 +17,4 @@ smart-open==4.2.0
 threadpoolctl==2.1.0
 torch==1.2.0
 torchvision==0.4.0
+gensim==3.6.0
