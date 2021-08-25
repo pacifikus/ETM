@@ -1,15 +1,41 @@
 import torch 
 import numpy as np
+from gensim.corpora import Dictionary
+from gensim.models.coherencemodel import CoherenceModel
+
 
 def get_topic_diversity(beta, topk):
+    beta = beta.cpu().numpy()
     num_topics = beta.shape[0]
     list_w = np.zeros((num_topics, topk))
     for k in range(num_topics):
-        idx = beta[k,:].argsort()[-topk:][::-1]
-        list_w[k,:] = idx
+      idx = beta[k,:].argsort()[-topk:][::-1]
+      list_w[k,:] = idx
     n_unique = len(np.unique(list_w))
     TD = n_unique / (topk * num_topics)
-    print('Topic diveristy is: {}'.format(TD))
+    print('Topic diversity is: {}'.format(TD))
+
+def get_coherence_gensim(vocabulary, n_wd, beta, c_type, topk=10):
+    beta = beta.cpu().numpy()
+    num_topics = beta.shape[0]
+    list_w = np.zeros((num_topics, topk))
+    for k in range(num_topics):
+      idx = beta[k,:].argsort()[-topk:][::-1]
+      list_w[k,:] = idx
+
+    word_topics = []
+    for topic in list_w:
+      word_topics.append([vocabulary[int(i)] for i in topic])
+
+    docs = []
+    for row in n_wd:
+      docs.append([vocabulary[i] for i, value in enumerate(row) if value > 0])
+
+    dictionary = Dictionary(docs)
+    print('computing...')
+    coherence_model = CoherenceModel(topics=word_topics, texts=docs, dictionary=dictionary, coherence=c_type)
+    coherence = coherence_model.get_coherence()
+    return coherence
 
 def get_document_frequency(data, wi, wj=None):
     if wj is None:
@@ -73,7 +99,19 @@ def get_topic_coherence(beta, data, vocab):
     TC = np.mean(TC) / counter
     print('Topic coherence is: {}'.format(TC))
 
-def nearest_neighbors(model, word):
-    nearest_neighbors = model.wv.most_similar(word, topn=20)
-    nearest_neighbors = [comp[0] for comp in nearest_neighbors]
+def nearest_neighbors(word, embeddings, vocab):
+    vectors = embeddings.data.cpu().numpy() 
+    index = vocab.index(word)
+    print('vectors: ', vectors.shape)
+    query = vectors[index]
+    print('query: ', query.shape)
+    ranks = vectors.dot(query).squeeze()
+    denom = query.T.dot(query).squeeze()
+    denom = denom * np.sum(vectors**2, 1)
+    denom = np.sqrt(denom)
+    ranks = ranks / denom
+    mostSimilar = []
+    [mostSimilar.append(idx) for idx in ranks.argsort()[::-1]]
+    nearest_neighbors = mostSimilar[:20]
+    nearest_neighbors = [vocab[comp] for comp in nearest_neighbors]
     return nearest_neighbors
