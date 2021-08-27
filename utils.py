@@ -5,7 +5,6 @@ from gensim.models.coherencemodel import CoherenceModel
 
 
 def get_topic_diversity(beta, topk):
-    beta = beta.cpu().numpy()
     num_topics = beta.shape[0]
     list_w = np.zeros((num_topics, topk))
     for k in range(num_topics):
@@ -15,7 +14,8 @@ def get_topic_diversity(beta, topk):
     TD = n_unique / (topk * num_topics)
     print('Topic diversity is: {}'.format(TD))
 
-def get_coherence_gensim(vocabulary, n_wd, beta, c_type, topk=10):
+
+def get_topics(vocabulary, beta, dictionary, topk=10):
     beta = beta.cpu().numpy()
     num_topics = beta.shape[0]
     list_w = np.zeros((num_topics, topk))
@@ -26,13 +26,18 @@ def get_coherence_gensim(vocabulary, n_wd, beta, c_type, topk=10):
     word_topics = []
     for topic in list_w:
       word_topics.append([vocabulary[int(i)] for i in topic])
+    return word_topics
 
+
+def get_dictionary(vocabulary, n_wd):
     docs = []
     for row in n_wd:
       docs.append([vocabulary[i] for i, value in enumerate(row) if value > 0])
+    return Dictionary(docs), docs
 
-    dictionary = Dictionary(docs)
-    print('computing...')
+
+def get_coherence_gensim(word_topics, dictionary, c_type, docs):
+    print(f'computing coherence {c_type}...')
     coherence_model = CoherenceModel(topics=word_topics, texts=docs, dictionary=dictionary, coherence=c_type)
     coherence = coherence_model.get_coherence()
     return coherence
