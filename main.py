@@ -465,7 +465,6 @@ else:
         show_viz(model, data_batch, vocab)
 
         dictionary, docs = get_dictionary(vocab, data_batch)
-        print(dictionary.token2id['дело'])
         topics = get_topics(vocab, beta, dictionary)
 
         print(f'result perplexity: {res_ppx}')
