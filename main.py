@@ -21,7 +21,8 @@ from torch import nn, optim
 from torch.nn import functional as F
 
 from etm import ETM
-from utils import nearest_neighbors, get_topic_coherence, get_topic_diversity, get_coherence_gensim
+from utils import (nearest_neighbors, get_topic_coherence, get_topic_diversity,
+ get_coherence_gensim, get_dictionary, get_topics)
 
 parser = argparse.ArgumentParser(description='The Embedded Topic Model')
 
@@ -459,15 +460,16 @@ else:
             
         avg_ppx = ppx / nd
         res_ppx = math.exp(avg_ppx)
-
-        indices = torch.split(torch.tensor(range(args.num_docs_test_1)), 1000)
-        data_batch = data.get_batch(test_1_tokens, test_1_counts, indices[0], args.vocab_size, device)
+        indices = torch.split(torch.tensor(range(args.num_docs_train)), 1000)
+        data_batch = data.get_batch(train_tokens, train_counts, indices[0], args.vocab_size, device)
         show_viz(model, data_batch, vocab)
+
+        dictionary, docs = get_dictionary(vocab, data_batch)
+        print(dictionary.token2id['дело'])
+        topics = get_topics(vocab, beta, dictionary)
+
         print(f'result perplexity: {res_ppx}')
         print(f'beta sparsity: {1.0 - torch.count_nonzero(beta)  / torch.numel(beta)}')
         print(f'theta sparsity: {1.0 - torch.count_nonzero(theta)  / torch.numel(theta)}')
-        get_topic_diversity(beta, 10)
-        print(f'Coherence c_v: {get_coherence_gensim(vocab, data_batch, beta, "c_v")}')
-        print(f'Coherence c_nmpi: {get_coherence_gensim(vocab, data_batch, beta, "c_npmi")}')
-
-       
+        print(f'Coherence c_v: {get_coherence_gensim(topics, dictionary, "c_v", docs)}')
+        print(f'Coherence c_nmpi: {get_coherence_gensim(topics, dictionary, "c_npmi", docs)}')
